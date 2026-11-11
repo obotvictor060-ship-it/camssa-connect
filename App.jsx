@@ -109,7 +109,11 @@ function App() {
       <div className="topline"><span>COMMUNICATION & MEDIA STUDIES STUDENTS ASSOCIATION</span><span>UNIVERSITY OF UYO</span></div>
       <header className="header">
         <button className="brand" onClick={() => go("Home")} aria-label="CAMSSA CONNECT home">
-          <span className="brand-mark">C<span>+</span></span>
+          <img
+  src="/file_00000000171c8210bb9f4ceedf81218a.png"
+  alt="CAMSSA Connect Logo"
+  className="brand-logo"
+/>
           <span><strong>CAMSSA CONNECT</strong><small>Information • Opportunity • Community</small></span>
         </button>
         <button className="mobile-toggle" onClick={() => setMobileMenu(!mobileMenu)} aria-label="Toggle navigation">{mobileMenu ? <X/> : <Menu/>}</button>
