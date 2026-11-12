@@ -28,6 +28,7 @@ function App() {
   const [showSell, setShowSell] = useState(false);
   const [notice, setNotice] = useState("");
   const [session, setSession] = useState(null);
+const [profileRole, setProfileRole] = useState("student");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [authMode, setAuthMode] = useState("signin");
@@ -42,7 +43,26 @@ function App() {
     loadListings();
     return () => listener.subscription.unsubscribe();
   }, []);
+  useEffect(() => {
+    async function loadProfileRole() {
+      if (!hasSupabase || !session?.user) {
+        setProfileRole("student");
+        return;
+      }
 
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", session.user.id)
+        .single();
+
+      if (!error && data) {
+        setProfileRole(data.role);
+      }
+    }
+
+    loadProfileRole();
+  }, [session]);
   async function loadListings() {
     if (!hasSupabase) return;
     const { data, error } = await supabase.from("marketplace_listings").select("*").eq("status", "approved").order("created_at", { ascending: false });
@@ -119,6 +139,11 @@ function App() {
         <button className="mobile-toggle" onClick={() => setMobileMenu(!mobileMenu)} aria-label="Toggle navigation">{mobileMenu ? <X/> : <Menu/>}</button>
         <nav className={mobileMenu ? "nav open" : "nav"}>
           {nav.map(item => <button key={item} className={page === item ? "nav-link active" : "nav-link"} onClick={() => go(item)}>{item}</button>)}
+          {profileRole === "admin" && (
+  <button className="nav-link" onClick={() => go("Admin")}>
+    Admin Dashboard
+  </button>
+)}
           <button className="nav-cta" onClick={() => { setAuthOpen(true); setMobileMenu(false); }}>{session ? "My account" : "Student login"}</button>
         </nav>
       </header>
@@ -170,8 +195,25 @@ function App() {
         {visibleListings.length === 0 && <div className="empty-state">No listings match your search. Try another keyword or category.</div>}
         <div className="safety-note"><ShieldCheck/><div><b>Shop thoughtfully</b><span>Confirm item details, meet in a safe public place and agree on payment and delivery directly with the seller. CAMSSA CONNECT does not process or guarantee transactions.</span></div></div>
       </main>}
+            {page === "Admin" && <main className="page-main">
+        <PageIntro
+          eyebrow="ADMINISTRATION"
+          title="CAMSSA Admin Dashboard"
+          text="Manage official information and activities on CAMSSA Connect."
+        />
+        <div className="content-cards">
+          {["Announcements", "News", "Events", "Opportunities", "Marketplace"].map(item => (
+            <article className="content-card" key={item}>
+              <span className="content-number">ADMIN</span>
+              <h3>{item} Management</h3>
+              <p>Manage and oversee {item.toLowerCase()} on CAMSSA Connect.</p>
+              <span className="coming-soon">MANAGEMENT TOOLS NEXT</span>
+            </article>
+          ))}
+        </div>
+      </main>}
 
-      {page !== "Home" && page !== "Marketplace" && <ContentPage page={page} onMarket={() => go("Marketplace")} onNotice={setNotice}/>}
+      {page !== "Home" && page !== "Marketplace" && page !== "Admin" && <ContentPage page={page} onMarket={() => go("Marketplace")} onNotice={setNotice}/>}
       <footer className="footer"><div className="footer-top"><div><div className="footer-brand">CAMSSA <span>CONNECT</span></div><p>Connecting Camssaites through information, opportunity and community.</p></div><div className="footer-office"><b>POWERED BY</b><span>Office of the Director of Information & Public Relations</span><small>Communication and Media Studies Students Association<br/>University of Uyo</small></div></div><div className="footer-bottom"><span>© {new Date().getFullYear()} CAMSSA CONNECT. Community digital platform concept.</span><span>Built for information. Designed for connection.</span></div></footer>
 
       {showSell && <Modal title="Submit a marketplace listing" onClose={() => setShowSell(false)}><form className="form-stack" onSubmit={submitListing}>
