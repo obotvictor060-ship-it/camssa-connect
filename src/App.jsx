@@ -45,7 +45,7 @@ const [announcementForm, setAnnouncementForm] = useState({ title: "", body: "", 
   }, []);
   useEffect(() => {
     async function loadProfileRole() {
-      if (!hasSupabase || !session?.user) {
+     if (!hasSupabase || !session?.user) {
         setProfileRole("student");
         return;
       }
