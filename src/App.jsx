@@ -23,6 +23,8 @@ function App() {
   const [page, setPage] = useState("Home");
   const [mobileMenu, setMobileMenu] = useState(false);
   const [listings, setListings] = useState(sampleListings);
+  const [adminListings, setAdminListings] = useState([]);
+const [adminListingsLoading, setAdminListingsLoading] = useState(false);
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("All");
   const [showSell, setShowSell] = useState(false);
@@ -64,6 +66,49 @@ const [announcementForm, setAnnouncementForm] = useState({ title: "", body: "", 
     loadProfileRole();
   }, [session]);
   async function loadListings() {
+   async function loadAdminListings() {
+  if (!hasSupabase || profileRole !== "admin") return;
+
+  setAdminListingsLoading(true);
+
+  const { data, error } = await supabase
+    .from("marketplace_listings")
+    .select("*")
+    .eq("status", "pending")
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    setNotice(error.message);
+  } else {
+    setAdminListings(data || []);
+  }
+
+  setAdminListingsLoading(false);
+   } 
+    async function updateListingStatus(id, status) {
+  const { error } = await supabase
+    .from("marketplace_listings")
+    .update({ status })
+    .eq("id", id);
+
+  if (error) {
+    setNotice(error.message);
+    return;
+  }
+
+  setNotice(
+    status === "approved"
+      ? "Listing approved successfully."
+      : "Listing rejected successfully."
+  );
+
+  await loadAdminListings();
+    }
+    useEffect(() => {
+  if (page === "Admin" && profileRole === "admin") {
+    loadAdminListings();
+  }
+}, [page, profileRole]);
     if (!hasSupabase) return;
     const { data, error } = await supabase.from("marketplace_listings").select("*").eq("status", "approved").order("created_at", { ascending: false });
     if (!error && data) setListings(data);
@@ -282,10 +327,39 @@ async function publishAnnouncement(event) {
     {loading ? "Publishing..." : "Publish announcement"}
   </button>
 </form>
-              <div className="admin-section">
+        <div className="admin-section">
   <h2>Marketplace Management</h2>
   <p>Review and manage student marketplace submissions.</p>
-  <p>Marketplace approval tools will appear here.</p>
+
+  {adminListingsLoading && <p>Loading listings...</p>}
+
+  {!adminListingsLoading && adminListings.length === 0 && (
+    <p>No pending marketplace listings.</p>
+  )}
+
+  {adminListings.map((item) => (
+    <div className="content-card" key={item.id}>
+      <h3>{item.title}</h3>
+      <p>Category: {item.category}</p>
+      <p>Price: ₦{Number(item.price).toLocaleString()}</p>
+      <p>{item.description}</p>
+      <p>Contact: {item.contact_info}</p>
+
+      <button
+        className="btn-primary"
+        onClick={() => updateListingStatus(item.id, "approved")}
+      >
+        Approve
+      </button>
+
+      <button
+        className="btn-secondary"
+        onClick={() => updateListingStatus(item.id, "rejected")}
+      >
+        Reject
+      </button>
+    </div>
+  ))}
 </div>
      </main>}       
       {page !== "Home" && page !== "Marketplace" && page !== "Admin" && <ContentPage page={page} onMarket={() => go("Marketplace")} onNotice={setNotice}/>}
