@@ -35,7 +35,7 @@ const [profileRole, setProfileRole] = useState("student");
   const [authOpen, setAuthOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({ title: "", category: categories[1], price: "", description: "", seller_name: "", whatsapp: "", image_url: "" });
-
+const [announcementForm, setAnnouncementForm] = useState({ title: "", body: "", category: "General Notice" });
   useEffect(() => {
     if (!hasSupabase) return;
     supabase.auth.getSession().then(({ data }) => setSession(data.session));
@@ -122,7 +122,44 @@ const [profileRole, setProfileRole] = useState("student");
       setNotice("Preview mode: connect Supabase to submit and save listings. This demo listing has not been published.");
     }
   }
+async function publishAnnouncement(event) {
+  event.preventDefault();
 
+  if (!session || profileRole !== "admin") {
+    setNotice("Administrator access is required.");
+    return;
+  }
+
+  if (!announcementForm.title.trim() || !announcementForm.body.trim()) {
+    setNotice("Please enter both a title and announcement details.");
+    return;
+  }
+
+  setLoading(true);
+
+  const { error } = await supabase.from("announcements").insert({
+    title: announcementForm.title.trim(),
+    body: announcementForm.body.trim(),
+    issuing_office: "Office of the Director of Information & Public Relations, CAMSSA",
+    category: announcementForm.category,
+    published: true,
+    created_by: session.user.id
+  });
+
+  setLoading(false);
+
+  if (error) {
+    setNotice(error.message);
+    return;
+  }
+
+  setNotice("Announcement published successfully.");
+  setAnnouncementForm({
+    title: "",
+    body: "",
+    category: "General Notice"
+  });
+}
   const nav = ["Home", "News", "Announcements", "Events", "Marketplace", "Opportunities", "Resources", "Media Centre", "About"];
   return (
     <div className="app-shell">
@@ -201,18 +238,49 @@ const [profileRole, setProfileRole] = useState("student");
           title="CAMSSA Admin Dashboard"
           text="Manage official information and activities on CAMSSA Connect."
         />
-        <div className="content-cards">
-          {["Announcements", "News", "Events", "Opportunities", "Marketplace"].map(item => (
-            <article className="content-card" key={item}>
-              <span className="content-number">ADMIN</span>
-              <h3>{item} Management</h3>
-              <p>Manage and oversee {item.toLowerCase()} on CAMSSA Connect.</p>
-              <span className="coming-soon">MANAGEMENT TOOLS NEXT</span>
-            </article>
-          ))}
-        </div>
-      </main>}
+        <form className="form-stack" onSubmit={publishAnnouncement}>
+  <label>
+    Announcement title *
+    <input
+      required
+      value={announcementForm.title}
+      onChange={e => setAnnouncementForm({...announcementForm, title: e.target.value})}
+      placeholder="Enter announcement title"
+    />
+  </label>
 
+  <label>
+    Category *
+    <select
+      value={announcementForm.category}
+      onChange={e => setAnnouncementForm({...announcementForm, category: e.target.value})}
+    >
+      <option>General Notice</option>
+      <option>Academic Notice</option>
+      <option>Event</option>
+      <option>Urgent</option>
+    </select>
+  </label>
+
+  <label>
+    Announcement details *
+    <textarea
+      required
+      rows="6"
+      value={announcementForm.body}
+      onChange={e => setAnnouncementForm({...announcementForm, body: e.target.value})}
+      placeholder="Write the full announcement here..."
+    />
+  </label>
+
+  <p className="form-hint">
+    Published announcements will be available to students.
+  </p>
+
+  <button className="btn-primary full" disabled={loading}>
+    {loading ? "Publishing..." : "Publish announcement"}
+  </button>
+</form>
       {page !== "Home" && page !== "Marketplace" && page !== "Admin" && <ContentPage page={page} onMarket={() => go("Marketplace")} onNotice={setNotice}/>}
       <footer className="footer"><div className="footer-top"><div><div className="footer-brand">CAMSSA <span>CONNECT</span></div><p>Connecting Camssaites through information, opportunity and community.</p></div><div className="footer-office"><b>POWERED BY</b><span>Office of the Director of Information & Public Relations</span><small>Communication and Media Studies Students Association<br/>University of Uyo</small></div></div><div className="footer-bottom"><span>© {new Date().getFullYear()} CAMSSA CONNECT. Community digital platform concept.</span><span>Built for information. Designed for connection.</span></div></footer>
 
