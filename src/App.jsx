@@ -108,11 +108,15 @@ const [announcementForm, setAnnouncementForm] = useState({ title: "", body: "", 
       if (!session) { setNotice("Please sign in before submitting a listing."); setAuthOpen(true); return; }
       setLoading(true);
       const { error } = await supabase.from("marketplace_listings").insert({
-        title: form.title, category: form.category, price: Number(form.price),
-        description: form.description, seller_name: form.seller_name,
-        whatsapp: form.whatsapp, image_url: form.image_url || null, seller_id: session.user.id,
-        status: "pending"
-      });
+  title: form.title,
+  category: form.category,
+  price: Number(form.price),
+  description: form.description,
+  contact_info: `${form.seller_name} | WhatsApp: ${form.whatsapp}`,
+  image_url: form.image_url || null,
+  seller_id: session.user.id,
+  status: "pending"
+});
       setLoading(false);
       if (error) { setNotice(error.message); return; }
       setNotice("Your listing has been submitted for administrator approval.");
