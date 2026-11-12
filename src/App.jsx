@@ -309,18 +309,79 @@ function QuickCard({icon,title,text,onClick}) { return <button className="quick-
 function FeatureCard({tone,icon,title,text,onClick}) { return <button className={`feature-card ${tone}`} onClick={onClick}><span className="feature-icon">{icon}</span><h3>{title}</h3><p>{text}</p><span className="feature-link">Explore <ArrowRight size={15}/></span></button>; }
 function PageIntro({eyebrow,title,text}) { return <div className="page-intro"><div className="eyebrow">{eyebrow}</div><h1>{title}</h1><p>{text}</p></div>; }
 function ContentPage({page,onMarket,onNotice}) {
+  const [announcements, setAnnouncements] = useState([]);
+  const [announcementLoading, setAnnouncementLoading] = useState(false);
+  const [announcementError, setAnnouncementError] = useState("");
+
+  useEffect(() => {
+    async function loadAnnouncements() {
+      if (page !== "Announcements" || !hasSupabase) return;
+
+      setAnnouncementLoading(true);
+      setAnnouncementError("");
+
+      const { data, error } = await supabase
+        .from("announcements")
+        .select("*")
+        .eq("published", true);
+
+      if (error) {
+        setAnnouncementError(error.message);
+      } else {
+        setAnnouncements(data || []);
+      }
+
+      setAnnouncementLoading(false);
+    }
+
+    loadAnnouncements();
+  }, [page]);
+
   const content = {
     News: ["CAMPUS STORIES", "News & stories", "Updates, interviews and stories from the Communication and Media Studies community.", [["Student voices", "A space for perspectives, experiences and conversations from across the faculty."],["Faculty developments","Verified reports on activities, milestones and important developments."],["People & achievements","Celebrating student, staff and alumni achievements."]]],
-    Announcements: ["OFFICIAL INFORMATION", "Announcements", "Important notices and verified information for students. Official posts should identify the issuing office and publication date.", [["Academic notices","Course registration, examinations and other academic information."],["Association updates","CAMSSA meetings, programmes and official communications."],["Deadlines & reminders","Important dates and actions students should not miss."]]],
+    Announcements: ["OFFICIAL INFORMATION", "Announcements", "Important notices and verified information for students."],
     Events: ["WHAT'S HAPPENING", "Events & calendar", "Keep track of seminars, workshops, faculty programmes and student activities.", [["Seminars & workshops","Learning, professional development and skills programmes."],["Association programmes","CAMSSA activities, meetings and community events."],["Competitions","Debates, creative challenges and interdepartmental activities."]]],
-    Opportunities: ["GROW • LEARN • ADVANCE", "Opportunities", "A curated space for scholarships, internships, competitions, fellowships and career opportunities. Verify eligibility and deadlines with the provider.", [["Internships","Practical experience and placement opportunities."],["Scholarships & grants","Funding opportunities and educational support."],["Competitions & fellowships","Calls for entries, leadership programmes and creative challenges."]]],
+    Opportunities: ["GROW • LEARN • ADVANCE", "Opportunities", "A curated space for scholarships, internships, competitions, fellowships and career opportunities.", [["Internships","Practical experience and placement opportunities."],["Scholarships & grants","Funding opportunities and educational support."],["Competitions & fellowships","Calls for entries, leadership programmes and creative challenges."]]],
     Resources: ["STUDENT SUPPORT", "Academic resources", "Useful learning materials, guides and links to support students through their academic journey.", [["Course guides","Departmental course information and study guidance."],["Learning materials","Reading lists, recommended resources and academic support."],["Student handbook","Important student information and association resources."]]],
     "Media Centre": ["WATCH • LISTEN • READ", "Media centre", "A home for CAMSSA media productions, interviews, podcasts, photography and campus coverage.", [["Campus Pulse","Weekly campus highlights and student conversations."],["The Game Plan","Conversations on sports, leadership and campus development."],["Photo & video stories","Visual documentation of faculty and student activities."]]],
     About: ["ABOUT THE PLATFORM", "About CAMSSA CONNECT", "A proposed digital information and community platform designed to make verified information, opportunities and student commerce easier to access.", [["Our purpose","Connect students to timely information and useful opportunities."],["Information standards","Official notices should be verified and clearly attributed to the issuing office."],["Marketplace principles","Listings are reviewed; buyers and sellers communicate and transact independently."]]]
   };
-  const data = content[page] || content.News;
-  return <main className="page-main"><PageIntro eyebrow={data[0]} title={data[1]} text={data[2]}/><div className="content-cards">{data[3].map(([title,text],i)=><article className="content-card" key={title}><span className="content-number">0{i+1}</span><h3>{title}</h3><p>{text}</p><span className="coming-soon">CONTENT AREA · READY FOR ADMIN UPDATES</span></article>)}</div>{page==="About" && <div className="safety-note"><ShieldCheck/><div><b>Important launch note</b><span>This starter is a project concept. Obtain the appropriate CAMSSA/faculty approval before describing it as an official university or association service.</span></div></div>}</main>;
-}
-function Modal({title,children,onClose}) { return <div className="modal-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget)onClose();}}><section className="modal"><div className="modal-head"><h2>{title}</h2><button onClick={onClose} aria-label="Close"><X/></button></div>{children}</section></div>; }
 
-export default App;
+  const data = content[page] || content.News;
+
+  return (
+    <main className="page-main">
+      <PageIntro eyebrow={data[0]} title={data[1]} text={data[2]}/>
+
+      {page === "Announcements" ? (
+        <div className="content-cards">
+          {announcementLoading && <p>Loading announcements...</p>}
+          {announcementError && <p>{announcementError}</p>}
+          {!announcementLoading && !announcementError && announcements.length === 0 && (
+            <p>No announcements have been published yet.</p>
+          )}
+          {announcements.map(item => (
+            <article className="content-card" key={item.id}>
+              <span className="content-number">{item.category || "General Notice"}</span>
+              <h3>{item.title}</h3>
+              <p>{item.content}</p>
+            </article>
+          ))}
+        </div>
+      ) : (
+        <div className="content-cards">
+          {data[3]?.map(([title,text],i)=>(
+            <article className="content-card" key={title}>
+              <span className="content-number">0{i+1}</span>
+              <h3>{title}</h3>
+              <p>{text}</p>
+              <span className="coming-soon">CONTENT AREA · READY FOR ADMIN UPDATES</span>
+            </article>
+          ))}
+        </div>
+      )}
+
+      {page==="About" && <div className="safety-note"><ShieldCheck/><div><b>Important launch note</b><span>This starter is a project concept. Obtain the appropriate CAMSSA/faculty approval before describing it as an official university or association service.</span></div></div>}
+    </main>
+  );
+}
