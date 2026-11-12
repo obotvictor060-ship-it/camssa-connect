@@ -138,14 +138,11 @@ async function publishAnnouncement(event) {
   setLoading(true);
 
   const { error } = await supabase.from("announcements").insert({
-    title: announcementForm.title.trim(),
-    body: announcementForm.body.trim(),
-    issuing_office: "Office of the Director of Information & Public Relations, CAMSSA",
-    category: announcementForm.category,
-    published: true,
-    created_by: session.user.id
-  });
-
+  title: announcementForm.title.trim(),
+  content: announcementForm.body.trim(),
+  category: announcementForm.category,
+  published: true
+});
   setLoading(false);
 
   if (error) {
