@@ -281,6 +281,7 @@ async function publishAnnouncement(event) {
     {loading ? "Publishing..." : "Publish announcement"}
   </button>
 </form>
+     </main>}       
       {page !== "Home" && page !== "Marketplace" && page !== "Admin" && <ContentPage page={page} onMarket={() => go("Marketplace")} onNotice={setNotice}/>}
       <footer className="footer"><div className="footer-top"><div><div className="footer-brand">CAMSSA <span>CONNECT</span></div><p>Connecting Camssaites through information, opportunity and community.</p></div><div className="footer-office"><b>POWERED BY</b><span>Office of the Director of Information & Public Relations</span><small>Communication and Media Studies Students Association<br/>University of Uyo</small></div></div><div className="footer-bottom"><span>© {new Date().getFullYear()} CAMSSA CONNECT. Community digital platform concept.</span><span>Built for information. Designed for connection.</span></div></footer>
 
