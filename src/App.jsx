@@ -38,6 +38,7 @@ const [profileRole, setProfileRole] = useState("student");
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({ title: "", category: categories[1], price: "", description: "", seller_name: "", whatsapp: "", image_url: "" });
 const [announcementForm, setAnnouncementForm] = useState({ title: "", body: "", category: "General Notice" });
+ const [imageFile, setImageFile] = useState(null);
   useEffect(() => {
     if (!hasSupabase) return;
     supabase.auth.getSession().then(({ data }) => setSession(data.session));
@@ -384,7 +385,14 @@ async function publishAnnouncement(event) {
         <div className="form-two"><label>Category *<select value={form.category} onChange={e => setForm({...form,category:e.target.value})}>{categories.filter(x=>x!=="All").map(x=><option key={x}>{x}</option>)}</select></label><label>Price in naira *<input required type="number" min="0" value={form.price} onChange={e => setForm({...form,price:e.target.value})} placeholder="5000"/></label></div>
         <label>Description *<textarea required rows="3" value={form.description} onChange={e => setForm({...form,description:e.target.value})} placeholder="Describe the item or service..."/></label>
         <div className="form-two"><label>Seller name *<input required value={form.seller_name} onChange={e => setForm({...form,seller_name:e.target.value})} placeholder="Your display name"/></label><label>WhatsApp number *<input required value={form.whatsapp} onChange={e => setForm({...form,whatsapp:e.target.value})} placeholder="e.g. 2348012345678"/></label></div>
-        <label>Product image URL (optional)<input value={form.image_url} onChange={e => setForm({...form,image_url:e.target.value})} placeholder="https://..."/></label>
+        <label>Product photo (optional)
+  <input
+    type="file"
+    accept="image/jpeg,image/png,image/webp"
+    onChange={e => setImageFile(e.target.files?.[0] || null)}
+  />
+  <small>Maximum 5 MB. JPG, PNG or WEBP.</small>
+</label>
         <p className="form-hint">Listings are subject to review before publication. Use a WhatsApp number with country code, e.g. 234.</p>
         <button className="btn-primary full" disabled={loading}>{loading ? "Submitting..." : "Submit for approval"}</button>
       </form></Modal>}
