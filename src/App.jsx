@@ -66,7 +66,18 @@ const [announcementForm, setAnnouncementForm] = useState({ title: "", body: "", 
     loadProfileRole();
   }, [session]);
   async function loadListings() {
-   async function loadAdminListings() {
+  if (!hasSupabase) return;
+
+  const { data, error } = await supabase
+    .from("marketplace_listings")
+    .select("*")
+    .eq("status", "approved")
+    .order("created_at", { ascending: false });
+
+  if (!error && data) setListings(data);
+}
+
+async function loadAdminListings() {
   if (!hasSupabase || profileRole !== "admin") return;
 
   setAdminListingsLoading(true);
@@ -84,8 +95,9 @@ const [announcementForm, setAnnouncementForm] = useState({ title: "", body: "", 
   }
 
   setAdminListingsLoading(false);
-   } 
-    async function updateListingStatus(id, status) {
+}
+
+async function updateListingStatus(id, status) {
   const { error } = await supabase
     .from("marketplace_listings")
     .update({ status })
@@ -103,16 +115,13 @@ const [announcementForm, setAnnouncementForm] = useState({ title: "", body: "", 
   );
 
   await loadAdminListings();
-    }
-    useEffect(() => {
+}
+
+useEffect(() => {
   if (page === "Admin" && profileRole === "admin") {
     loadAdminListings();
   }
 }, [page, profileRole]);
-    if (!hasSupabase) return;
-    const { data, error } = await supabase.from("marketplace_listings").select("*").eq("status", "approved").order("created_at", { ascending: false });
-    if (!error && data) setListings(data);
-  }
 
   const visibleListings = useMemo(() => listings.filter(item => {
     const matchesCategory = category === "All" || item.category === category;
