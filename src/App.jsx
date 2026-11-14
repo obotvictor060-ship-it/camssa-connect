@@ -153,39 +153,85 @@ useEffect(() => {
     else { setNotice(authMode === "signup" ? "Account created. Check your email if confirmation is enabled." : "Signed in successfully."); setAuthOpen(false); }
   }
 
-  async function signOut() {
-    if (hasSupabase) await supabase.auth.signOut();
-    setSession(null);
-    setNotice("You have signed out.");
+  
+async function submitListing(event) {
+  event.preventDefault();
+
+  if (!form.title || !form.price || !form.description || !form.seller_name || !form.whatsapp) {
+    setNotice("Please complete all required listing fields.");
+    return;
   }
 
-  async function submitListing(event) {
-    event.preventDefault();
-    if (!form.title || !form.price || !form.description || !form.seller_name || !form.whatsapp) {
-      setNotice("Please complete all required listing fields."); return;
+  if (hasSupabase) {
+    if (!session) {
+      setNotice("Please sign in before submitting a listing.");
+      setAuthOpen(true);
+      return;
     }
-    if (hasSupabase) {
-      if (!session) { setNotice("Please sign in before submitting a listing."); setAuthOpen(true); return; }
-      setLoading(true);
-      const { error } = await supabase.from("marketplace_listings").insert({
-  title: form.title,
-  category: form.category,
-  price: Number(form.price),
-  description: form.description,
-  contact_info: `${form.seller_name} | WhatsApp: ${form.whatsapp}`,
-  image_url: form.image_url || null,
-  seller_id: session.user.id,
-  status: "pending"
-});
-      setLoading(false);
-      if (error) { setNotice(error.message); return; }
-      setNotice("Your listing has been submitted for administrator approval.");
-      setShowSell(false);
-      setForm({ title: "", category: categories[1], price: "", description: "", seller_name: "", whatsapp: "", image_url: "" });
-    } else {
-      setNotice("Preview mode: connect Supabase to submit and save listings. This demo listing has not been published.");
+
+    setLoading(true);
+
+    let imageUrl = null;
+
+    if (imageFile) {
+      const safeName = imageFile.name.replace(/[^a-zA-Z0-9.-]/g, "_");
+      const filePath = `${session.user.id}/${Date.now()}-${safeName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("marketplace-images")
+        .upload(filePath, imageFile, {
+          contentType: imageFile.type,
+          upsert: false
+        });
+
+      if (uploadError) {
+        setLoading(false);
+        setNotice(uploadError.message);
+        return;
+      }
+
+      const { data: publicUrlData } = supabase.storage
+        .from("marketplace-images")
+        .getPublicUrl(filePath);
+
+      imageUrl = publicUrlData.publicUrl;
     }
+
+    const { error } = await supabase.from("marketplace_listings").insert({
+      title: form.title,
+      category: form.category,
+      price: Number(form.price),
+      description: form.description,
+      contact_info: `${form.seller_name} | WhatsApp: ${form.whatsapp}`,
+      image_url: imageUrl,
+      seller_id: session.user.id,
+      status: "pending"
+    });
+
+    setLoading(false);
+
+    if (error) {
+      setNotice(error.message);
+      return;
+    }
+
+    setNotice("Your listing has been submitted for administrator approval.");
+    setShowSell(false);
+    setForm({
+      title: "",
+      category: categories[1],
+      price: "",
+      description: "",
+      seller_name: "",
+      whatsapp: "",
+      image_url: ""
+    });
+    setImageFile(null);
+  } else {
+    setNotice("Preview mode: connect Supabase to submit and save listings. This demo listing has not been published.");
   }
+}
+  
 async function publishAnnouncement(event) {
   event.preventDefault();
 
