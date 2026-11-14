@@ -130,9 +130,14 @@ useEffect(() => {
   }), [listings, category, search]);
 
   function go(next) {
-    setPage(next);
-    setMobileMenu(false);
-    window.scrollTo({ top: 0, behavior: "smooth" });
+  setPage(next);
+
+  if (next === "Marketplace") {
+    loadListings();
+  }
+
+  setMobileMenu(false);
+  window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   async function authenticate(event) {
