@@ -202,7 +202,8 @@ async function submitListing(event) {
       category: form.category,
       price: Number(form.price),
       description: form.description,
-      contact_info: `${form.seller_name} | WhatsApp: ${form.whatsapp}`,
+      seller_name: form.seller_name,
+whatsapp: form.whatsapp,
       image_url: imageUrl,
       seller_id: session.user.id,
       status: "pending"
