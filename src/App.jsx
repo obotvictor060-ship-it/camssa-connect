@@ -25,6 +25,11 @@ function App() {
   const [listings, setListings] = useState(sampleListings);
   const [adminListings, setAdminListings] = useState([]);
 const [adminListingsLoading, setAdminListingsLoading] = useState(false);
+  const [libraryTitle, setLibraryTitle] = useState("");
+const [libraryDescription, setLibraryDescription] = useState("");
+const [libraryCategory, setLibraryCategory] = useState("Lecture Notes");
+const [libraryFile, setLibraryFile] = useState(null);
+const [libraryLoading, setLibraryLoading] = useState(false);
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("All");
   const [showSell, setShowSell] = useState(false);
@@ -152,7 +157,70 @@ useEffect(() => {
     if (action.error) setNotice(action.error.message);
     else { setNotice(authMode === "signup" ? "Account created. Check your email if confirmation is enabled." : "Signed in successfully."); setAuthOpen(false); }
   }
+async function uploadLibraryMaterial(event) {
+  event.preventDefault();
 
+  if (!libraryTitle || !libraryFile) {
+    setNotice("Please enter a title and select a PDF file.");
+    return;
+  }
+
+  if (!session || profileRole !== "admin") {
+    setNotice("Only administrators can upload library materials.");
+    return;
+  }
+
+  if (libraryFile.type !== "application/pdf") {
+    setNotice("Please select a PDF file.");
+    return;
+  }
+
+  setLibraryLoading(true);
+
+  const safeName = libraryFile.name.replace(/[^a-zA-Z0-9.-]/g, "_");
+  const filePath = `${session.user.id}/${Date.now()}-${safeName}`;
+
+  const { error: uploadError } = await supabase.storage
+    .from("camssa-library")
+    .upload(filePath, libraryFile, {
+      contentType: "application/pdf",
+      upsert: false
+    });
+
+  if (uploadError) {
+    setLibraryLoading(false);
+    setNotice(uploadError.message);
+    return;
+  }
+
+  const { data: publicUrlData } = supabase.storage
+    .from("camssa-library")
+    .getPublicUrl(filePath);
+
+  const { error } = await supabase.from("library_materials").insert({
+    title: libraryTitle,
+    description: libraryDescription,
+    category: libraryCategory,
+    file_name: libraryFile.name,
+    file_path: filePath,
+    file_url: publicUrlData.publicUrl,
+    uploaded_by: session.user.id,
+    published: true
+  });
+
+  setLibraryLoading(false);
+
+  if (error) {
+    setNotice(error.message);
+    return;
+  }
+
+  setNotice("Library material uploaded successfully!");
+  setLibraryTitle("");
+  setLibraryDescription("");
+  setLibraryCategory("Lecture Notes");
+  setLibraryFile(null);
+}
   
 async function submitListing(event) {
   event.preventDefault();
@@ -423,6 +491,63 @@ async function publishAnnouncement(event) {
     </div>
   ))}
 </div>
+              
+<section className="content-card">
+  <h2>Upload Library Material</h2>
+  <form className="form-stack" onSubmit={uploadLibraryMaterial}>
+    <label>
+      Material title *
+      <input
+        required
+        value={libraryTitle}
+        onChange={e => setLibraryTitle(e.target.value)}
+        placeholder="e.g. Introduction to Mass Communication"
+      />
+    </label>
+
+    <label>
+      Description
+      <textarea
+        rows="3"
+        value={libraryDescription}
+        onChange={e => setLibraryDescription(e.target.value)}
+        placeholder="Brief description of the material..."
+      />
+    </label>
+
+    <label>
+      Category *
+      <select
+        value={libraryCategory}
+        onChange={e => setLibraryCategory(e.target.value)}
+      >
+        {["Lecture Notes", "Past Questions", "Books & E-books", "Research Materials", "Handouts", "Other Resources"].map(x => (
+          <option key={x} value={x}>{x}</option>
+        ))}
+      </select>
+    </label>
+
+    <label>
+      Select PDF file *
+      <input
+        required
+        type="file"
+        accept="application/pdf,.pdf"
+        onChange={e => setLibraryFile(e.target.files?.[0] || null)}
+      />
+      <small>PDF only. Maximum file size: 20 MB.</small>
+    </label>
+
+    <button
+      className="btn-primary"
+      type="submit"
+      disabled={libraryLoading}
+    >
+      {libraryLoading ? "Uploading..." : "Upload Material"}
+    </button>
+  </form>
+</section>
+              
      </main>}       
       {page !== "Home" && page !== "Marketplace" && page !== "Admin" && <ContentPage page={page} onMarket={() => go("Marketplace")} onNotice={setNotice}/>}
       <footer className="footer"><div className="footer-top"><div><div className="footer-brand">CAMSSA <span>CONNECT</span></div><p>Connecting Camssaites through information, opportunity and community.</p></div><div className="footer-office"><b>POWERED BY</b><span>Office of the Director of Information & Public Relations</span><small>Communication and Media Studies Students Association<br/>University of Uyo</small></div></div><div className="footer-bottom"><span>© {new Date().getFullYear()} CAMSSA CONNECT. Community digital platform concept.</span><span>Built for information. Designed for connection.</span></div></footer>
