@@ -30,6 +30,9 @@ const [libraryDescription, setLibraryDescription] = useState("");
 const [libraryCategory, setLibraryCategory] = useState("Lecture Notes");
 const [libraryFile, setLibraryFile] = useState(null);
 const [libraryLoading, setLibraryLoading] = useState(false);
+  const [libraryMaterials, setLibraryMaterials] = useState([]);
+const [librarySearch, setLibrarySearch] = useState("");
+const [libraryFilter, setLibraryFilter] = useState("All");
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("All");
   const [showSell, setShowSell] = useState(false);
@@ -49,7 +52,8 @@ const [announcementForm, setAnnouncementForm] = useState({ title: "", body: "", 
     supabase.auth.getSession().then(({ data }) => setSession(data.session));
     const { data: listener } = supabase.auth.onAuthStateChange((_event, nextSession) => setSession(nextSession));
     loadListings();
-    return () => listener.subscription.unsubscribe();
+loadLibraryMaterials();
+return () => listener.subscription.unsubscribe();
   }, []);
   useEffect(() => {
     async function loadProfileRole() {
@@ -83,6 +87,23 @@ const [announcementForm, setAnnouncementForm] = useState({ title: "", body: "", 
   if (!error && data) setListings(data);
 }
 
+async function loadLibraryMaterials() {
+  if (!hasSupabase) return;
+
+  const { data, error } = await supabase
+    .from("library_materials")
+    .select("*")
+    .eq("published", true)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    setNotice(error.message);
+    return;
+  }
+
+  setLibraryMaterials(data || []);
+}
+  
 async function loadAdminListings() {
   if (!hasSupabase || profileRole !== "admin") return;
 
@@ -135,13 +156,26 @@ useEffect(() => {
     return matchesCategory && text.includes(search.toLowerCase());
   }), [listings, category, search]);
 
+const visibleLibraryMaterials = useMemo(() => {
+  return libraryMaterials.filter(item => {
+    const matchesCategory =
+      libraryFilter === "All" || item.category === libraryFilter;
+
+    const text = `${item.title} ${item.description || ""} ${item.category}`.toLowerCase();
+
+    return matchesCategory && text.includes(librarySearch.toLowerCase());
+  });
+}, [libraryMaterials, libraryFilter, librarySearch]);
+  
   function go(next) {
   setPage(next);
 
   if (next === "Marketplace") {
     loadListings();
   }
-
+if (next === "Library") {
+  loadLibraryMaterials();
+}
   setMobileMenu(false);
   window.scrollTo({ top: 0, behavior: "smooth" });
   }
@@ -336,7 +370,7 @@ async function publishAnnouncement(event) {
     category: "General Notice"
   });
 }
-  const nav = ["Home", "News", "Announcements", "Events", "Marketplace", "Opportunities", "Resources", "Media Centre", "About"];
+  const nav = ["Home", "News", "Announcements", "Events", "Marketplace", "Library", "Opportunities", "Resources", "Media Centre", "About"];
   return (
     <div className="app-shell">
       <div className="topline"><span>COMMUNICATION & MEDIA STUDIES STUDENTS ASSOCIATION</span><span>UNIVERSITY OF UYO</span></div>
@@ -407,6 +441,63 @@ async function publishAnnouncement(event) {
         </article>)}</div>
         {visibleListings.length === 0 && <div className="empty-state">No listings match your search. Try another keyword or category.</div>}
         <div className="safety-note"><ShieldCheck/><div><b>Shop thoughtfully</b><span>Confirm item details, meet in a safe public place and agree on payment and delivery directly with the seller. CAMSSA CONNECT does not process or guarantee transactions.</span></div></div>
+      </main>}
+            {page === "Library" && <main className="page-main">
+        <PageIntro
+          eyebrow="LEARN • EXPLORE • DOWNLOAD"
+          title="CAMSSA Digital Library"
+          text="Access academic materials, past questions, lecture notes, books and other useful learning resources."
+        />
+
+        <div className="market-toolbar">
+          <div className="searchbox">
+            <Search size={18}/>
+            <input
+              value={librarySearch}
+              onChange={e => setLibrarySearch(e.target.value)}
+              placeholder="Search materials or course codes..."
+            />
+          </div>
+        </div>
+
+        <div className="category-row">
+          {["All", "Lecture Notes", "Past Questions", "Books & E-books", "Research Materials", "Handouts", "Other Resources"].map(cat => (
+            <button
+              key={cat}
+              className={libraryFilter === cat ? "chip selected" : "chip"}
+              onClick={() => setLibraryFilter(cat)}
+            >
+              {cat}
+            </button>
+          ))}
+        </div>
+
+        <div className="listing-grid">
+          {visibleLibraryMaterials.map(item => (
+            <article className="listing-card" key={item.id}>
+              <div className="listing-content">
+                <span className="listing-category">{item.category}</span>
+                <h3>{item.title}</h3>
+                <p>{item.description || "Academic learning material for CAMSSA students."}</p>
+                <a
+                  className="btn-primary"
+                  href={item.file_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Download PDF
+                </a>
+              </div>
+            </article>
+          ))}
+        </div>
+
+        {visibleLibraryMaterials.length === 0 && (
+          <div className="content-card">
+            <h3>No materials found</h3>
+            <p>There are currently no materials in this category. Check back later.</p>
+          </div>
+        )}
       </main>}
             {page === "Admin" && <main className="page-main">
         <PageIntro
