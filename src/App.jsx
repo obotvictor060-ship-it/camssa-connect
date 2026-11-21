@@ -30,12 +30,9 @@ const [libraryDescription, setLibraryDescription] = useState("");
 const [libraryCategory, setLibraryCategory] = useState("Lecture Notes");
 const [libraryFile, setLibraryFile] = useState(null);
 const [libraryLoading, setLibraryLoading] = useState(false);
-  const [librarySearch, setLibrarySearch] = useState("");
+  const [libraryMaterials, setLibraryMaterials] = useState([]);
+const [librarySearch, setLibrarySearch] = useState("");
 const [libraryFilter, setLibraryFilter] = useState("All");
-  const [editingMaterial, setEditingMaterial] = useState(null);
-const [editLibraryTitle, setEditLibraryTitle] = useState("");
-const [editLibraryDescription, setEditLibraryDescription] = useState("");
-  const [editLibraryCategory, setEditLibraryCategory] = useState("Lecture Notes");
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("All");
   const [showSell, setShowSell] = useState(false);
@@ -194,8 +191,6 @@ if (next === "Library") {
     if (action.error) setNotice(action.error.message);
     else { setNotice(authMode === "signup" ? "Account created. Check your email if confirmation is enabled." : "Signed in successfully."); setAuthOpen(false); }
   }
-
-
 async function uploadLibraryMaterial(event) {
   event.preventDefault();
 
@@ -259,9 +254,8 @@ async function uploadLibraryMaterial(event) {
   setLibraryDescription("");
   setLibraryCategory("Lecture Notes");
   setLibraryFile(null);
-  loadLibraryMaterials();
 }
-
+  
 async function submitListing(event) {
   event.preventDefault();
 
@@ -278,6 +272,7 @@ async function submitListing(event) {
     }
 
     setLoading(true);
+
     let imageUrl = null;
 
     if (imageFile) {
@@ -310,7 +305,7 @@ async function submitListing(event) {
       price: Number(form.price),
       description: form.description,
       seller_name: form.seller_name,
-      whatsapp: form.whatsapp,
+whatsapp: form.whatsapp,
       image_url: imageUrl,
       seller_id: session.user.id,
       status: "pending"
@@ -339,74 +334,7 @@ async function submitListing(event) {
     setNotice("Preview mode: connect Supabase to submit and save listings. This demo listing has not been published.");
   }
 }
-    
   
-async function saveLibraryMaterial() {
-  if (!session || profileRole !== "admin") {
-    setNotice("Only administrators can edit library materials.");
-    return;
-  }
-
-  if (!editingMaterial || !editLibraryTitle.trim()) {
-    setNotice("Please enter a material title.");
-    return;
-  }
-
-  const { error } = await supabase
-    .from("library_materials")
-    .update({
-      title: editLibraryTitle,
-      description: editLibraryDescription,
-      category: editLibraryCategory
-    })
-    .eq("id", editingMaterial.id);
-
-  if (error) {
-    setNotice(error.message);
-    return;
-  }
-
-  setNotice("Library material updated successfully!");
-  setEditingMaterial(null);
-  setEditLibraryTitle("");
-  setEditLibraryDescription("");
-  setEditLibraryCategory("Lecture Notes");
-  loadLibraryMaterials();
-}
-async function deleteLibraryMaterial(item) {
-  if (!session || profileRole !== "admin") {
-    setNotice("Only administrators can delete library materials.");
-    return;
-  }
-
-  const confirmed = window.confirm(
-    `Are you sure you want to delete "${item.title}"?`
-  );
-
-  if (!confirmed) return;
-
-  const { error } = await supabase
-    .from("library_materials")
-    .delete()
-    .eq("id", item.id);
-
-  if (error) {
-    setNotice(error.message);
-    return;
-  }
-
-  const { error: storageError } = await supabase.storage
-    .from("camssa-library")
-    .remove([item.file_path]);
-
-  if (storageError) {
-    setNotice("Material record deleted, but the storage file could not be removed: " + storageError.message);
-  } else {
-    setNotice("Library material deleted successfully!");
-  }
-
-  loadLibraryMaterials();
-    }
 async function publishAnnouncement(event) {
   event.preventDefault();
 
@@ -710,93 +638,7 @@ async function publishAnnouncement(event) {
     </button>
   </form>
 </section>
-<section className="content-card">
-  <h2>Manage Library Materials</h2>
-
-{libraryMaterials.map(item => (
-  <div className="listing-card" key={item.id}>
-    <div className="listing-content">
-      <span className="listing-category">{item.category}</span>
-      <h3>{item.title}</h3>
-      <p>{item.description || "No description provided."}</p>
-
-      <button
-        type="button"
-        className="btn-primary"
-        onClick={() => {
-          setEditingMaterial(item);
-          setEditLibraryTitle(item.title);
-          setEditLibraryDescription(item.description || "");
-          setEditLibraryCategory(item.category);
-        }}
-      >
-        Edit Material
-      </button>
-
-      <button
-        type="button"
-        className="btn-primary"
-        onClick={() => deleteLibraryMaterial(item)}
-      >
-        Delete Material
-      </button>
-
-      {editingMaterial?.id === item.id && (
-        <form
-          className="form-stack"
-          onSubmit={e => {
-            e.preventDefault();
-            saveLibraryMaterial();
-          }}
-        >
-          <label>
-            Material title *
-            <input
-              required
-              value={editLibraryTitle}
-              onChange={e => setEditLibraryTitle(e.target.value)}
-            />
-          </label>
-
-          <label>
-            Description
-            <textarea
-              rows="3"
-              value={editLibraryDescription}
-              onChange={e => setEditLibraryDescription(e.target.value)}
-            />
-          </label>
-
-          <label>
-            Category
-            <select
-              value={editLibraryCategory}
-              onChange={e => setEditLibraryCategory(e.target.value)}
-            >
-              {["Lecture Notes", "Past Questions", "Books & E-books", "Research Materials", "Handouts", "Other Resources"].map(x => (
-                <option key={x} value={x}>{x}</option>
-              ))}
-            </select>
-          </label>
-
-          <button type="submit" className="btn-primary">
-            Save Changes
-          </button>
-
-          <button
-            type="button"
-            className="btn-primary"
-            onClick={() => setEditingMaterial(null)}
-          >
-            Cancel
-          </button>
-        </form>
-      )}
-    </div>
-  </div>
-))}
-  
-</section>              
+              
      </main>}       
       {page !== "Home" && page !== "Marketplace" && page !== "Admin" && <ContentPage page={page} onMarket={() => go("Marketplace")} onNotice={setNotice}/>}
       <footer className="footer"><div className="footer-top"><div><div className="footer-brand">CAMSSA <span>CONNECT</span></div><p>Connecting Camssaites through information, opportunity and community.</p></div><div className="footer-office"><b>POWERED BY</b><span>Office of the Director of Information & Public Relations</span><small>Communication and Media Studies Students Association<br/>University of Uyo</small></div></div><div className="footer-bottom"><span>© {new Date().getFullYear()} CAMSSA CONNECT. Community digital platform concept.</span><span>Built for information. Designed for connection.</span></div></footer>
