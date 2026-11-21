@@ -214,6 +214,26 @@ async function uploadLibraryMaterial(event) {
 
   setLibraryLoading(true);
 
+async function submitListing(event) {
+  event.preventDefault();
+
+  if (!form.title || !form.price || !form.description || !form.seller_name || !form.whatsapp) {
+    setNotice("Please complete all required listing fields.");
+    return;
+  }
+
+  if (hasSupabase) {
+    if (!session) {
+      setNotice("Please sign in before submitting a listing.");
+      setAuthOpen(true);
+      return;
+    }
+
+    setLoading(true);
+    let imageUrl = null;
+
+    if (imageFile) {
+
   const safeName = libraryFile.name.replace(/[^a-zA-Z0-9.-]/g, "_");
   const filePath = `${session.user.id}/${Date.now()}-${safeName}`;
 
@@ -259,7 +279,6 @@ async function uploadLibraryMaterial(event) {
   setLibraryFile(null);
 }
   
-y
       const safeName = imageFile.name.replace(/[^a-zA-Z0-9.-]/g, "_");
       const filePath = `${session.user.id}/${Date.now()}-${safeName}`;
 
@@ -319,27 +338,7 @@ whatsapp: form.whatsapp,
   }
 }
   
-async function publishAnnouncement(event) {
-  event.preventDefault();
 
-  if (!session || profileRole !== "admin") {
-    setNotice("Administrator access is required.");
-    return;
-  }
-
-  if (!announcementForm.title.trim() || !announcementForm.body.trim()) {
-    setNotice("Please enter both a title and announcement details.");
-    return;
-  }
-
-  setLoading(true);
-
-  const { error } = await supabase.from("announcements").insert({
-  title: announcementForm.title.trim(),
-  content: announcementForm.body.trim(),
-  category: announcementForm.category,
-  published: true
-});
 async function publishAnnouncement(event) {
   event.preventDefault();
 
