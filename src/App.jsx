@@ -194,6 +194,8 @@ if (next === "Library") {
     if (action.error) setNotice(action.error.message);
     else { setNotice(authMode === "signup" ? "Account created. Check your email if confirmation is enabled." : "Signed in successfully."); setAuthOpen(false); }
   }
+
+
 async function uploadLibraryMaterial(event) {
   event.preventDefault();
 
@@ -213,26 +215,6 @@ async function uploadLibraryMaterial(event) {
   }
 
   setLibraryLoading(true);
-
-async function submitListing(event) {
-  event.preventDefault();
-
-  if (!form.title || !form.price || !form.description || !form.seller_name || !form.whatsapp) {
-    setNotice("Please complete all required listing fields.");
-    return;
-  }
-
-  if (hasSupabase) {
-    if (!session) {
-      setNotice("Please sign in before submitting a listing.");
-      setAuthOpen(true);
-      return;
-    }
-
-    setLoading(true);
-    let imageUrl = null;
-
-    if (imageFile) {
 
   const safeName = libraryFile.name.replace(/[^a-zA-Z0-9.-]/g, "_");
   const filePath = `${session.user.id}/${Date.now()}-${safeName}`;
@@ -277,8 +259,28 @@ async function submitListing(event) {
   setLibraryDescription("");
   setLibraryCategory("Lecture Notes");
   setLibraryFile(null);
+  loadLibraryMaterials();
 }
-  
+
+async function submitListing(event) {
+  event.preventDefault();
+
+  if (!form.title || !form.price || !form.description || !form.seller_name || !form.whatsapp) {
+    setNotice("Please complete all required listing fields.");
+    return;
+  }
+
+  if (hasSupabase) {
+    if (!session) {
+      setNotice("Please sign in before submitting a listing.");
+      setAuthOpen(true);
+      return;
+    }
+
+    setLoading(true);
+    let imageUrl = null;
+
+    if (imageFile) {
       const safeName = imageFile.name.replace(/[^a-zA-Z0-9.-]/g, "_");
       const filePath = `${session.user.id}/${Date.now()}-${safeName}`;
 
@@ -308,7 +310,7 @@ async function submitListing(event) {
       price: Number(form.price),
       description: form.description,
       seller_name: form.seller_name,
-whatsapp: form.whatsapp,
+      whatsapp: form.whatsapp,
       image_url: imageUrl,
       seller_id: session.user.id,
       status: "pending"
@@ -337,8 +339,74 @@ whatsapp: form.whatsapp,
     setNotice("Preview mode: connect Supabase to submit and save listings. This demo listing has not been published.");
   }
 }
+    
   
+async function saveLibraryMaterial() {
+  if (!session || profileRole !== "admin") {
+    setNotice("Only administrators can edit library materials.");
+    return;
+  }
 
+  if (!editingMaterial || !editLibraryTitle.trim()) {
+    setNotice("Please enter a material title.");
+    return;
+  }
+
+  const { error } = await supabase
+    .from("library_materials")
+    .update({
+      title: editLibraryTitle,
+      description: editLibraryDescription,
+      category: editLibraryCategory
+    })
+    .eq("id", editingMaterial.id);
+
+  if (error) {
+    setNotice(error.message);
+    return;
+  }
+
+  setNotice("Library material updated successfully!");
+  setEditingMaterial(null);
+  setEditLibraryTitle("");
+  setEditLibraryDescription("");
+  setEditLibraryCategory("Lecture Notes");
+  loadLibraryMaterials();
+}
+async function deleteLibraryMaterial(item) {
+  if (!session || profileRole !== "admin") {
+    setNotice("Only administrators can delete library materials.");
+    return;
+  }
+
+  const confirmed = window.confirm(
+    `Are you sure you want to delete "${item.title}"?`
+  );
+
+  if (!confirmed) return;
+
+  const { error } = await supabase
+    .from("library_materials")
+    .delete()
+    .eq("id", item.id);
+
+  if (error) {
+    setNotice(error.message);
+    return;
+  }
+
+  const { error: storageError } = await supabase.storage
+    .from("camssa-library")
+    .remove([item.file_path]);
+
+  if (storageError) {
+    setNotice("Material record deleted, but the storage file could not be removed: " + storageError.message);
+  } else {
+    setNotice("Library material deleted successfully!");
+  }
+
+  loadLibraryMaterials();
+    }
 async function publishAnnouncement(event) {
   event.preventDefault();
 
